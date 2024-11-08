@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Cor principal (60%) - Azul marinho suave */
+    --background: 220 30% 98%;
+    --foreground: 220 30% 12%;
+    
+    /* Cor secundária (30%) - Bege suave */
+    --secondary: 30 25% 95%;
+    --secondary-foreground: 30 25% 20%;
+    
+    /* Cor de destaque (10%) - Laranja suave */
+    --primary: 30 60% 55%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Elementos de cartão e popover */
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 12%;
+    
+    /* Tons mutados - Variação do azul marinho */
+    --muted: 220 20% 92%;
+    --muted-foreground: 220 20% 45%;
+    
+    /* Tons de destaque - Bege suave */
+    --accent: 30 25% 92%;
+    --accent-foreground: 30 25% 20%;
+    
+    /* Tons de alerta */
+    --destructive: 0 60% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    /* Elementos de interface */
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 30 60% 55%;
+    --radius: 0.75rem;
+
+    /* Cores do gráfico */
+    --chart-1: 220 30% 50%;
+    --chart-2: 30 60% 55%;
+    --chart-3: 220 25% 60%;
+    --chart-4: 30 40% 60%;
+    --chart-5: 220 20% 70%;
+  }
+
+  .dark {
+    /* Cor principal (60%) - Azul marinho escuro */
+    --background: 220 30% 8%;
+    --foreground: 220 30% 98%;
+    
+    /* Cor secundária (30%) - Bege escuro */
+    --secondary: 30 15% 15%;
+    --secondary-foreground: 30 15% 90%;
+    
+    /* Cor de destaque (10%) - Laranja suave */
+    --primary: 30 50% 50%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Elementos escuros */
+    --card: 220 30% 8%;
+    --card-foreground: 220 30% 98%;
+    --popover: 220 30% 8%;
+    --popover-foreground: 220 30% 98%;
+    
+    /* Tons mutados escuros */
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 20% 65%;
+    
+    /* Tons de destaque escuros */
+    --accent: 30 15% 18%;
+    --accent-foreground: 30 15% 90%;
+    
+    /* Tons de alerta escuros */
+    --destructive: 0 50% 30%;
+    --destructive-foreground: 0 0% 98%;
+    
+    /* Elementos de interface escuros */
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 30 50% 50%;
+
+    /* Cores do gráfico - modo escuro */
+    --chart-1: 220 30% 60%;
+    --chart-2: 30 50% 60%;
+    --chart-3: 220 25% 70%;
+    --chart-4: 30 40% 70%;
+    --chart-5: 220 20% 80%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+  }
+}
