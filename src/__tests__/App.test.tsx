@@ -10,7 +10,8 @@ describe('App', () => {
 
   it('renders the navigation component', () => {
     render(<App />);
-    expect(screen.getByText(/Soba Construção Civil/i)).toBeInTheDocument();
+    const elements = screen.getAllByText(/Soba Construção Civil/i);
+    expect(elements[0]).toBeInTheDocument();
   });
 
   it('renders the footer component', () => {
