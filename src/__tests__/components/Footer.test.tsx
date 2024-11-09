@@ -14,9 +14,9 @@ describe('Footer', () => {
 
   it('renders quick links', () => {
     expect(screen.getByText(/Links Rápidos/i)).toBeInTheDocument();
-    expect(screen.getByText(/Serviços/i)).toBeInTheDocument();
-    expect(screen.getByTestId('footer-projetos-link')).toBeInTheDocument();
-    expect(screen.getByText(/Contato/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Serviços/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Projetos/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Contato/i })).toBeInTheDocument();
   });
 
   it('renders contact information', () => {
