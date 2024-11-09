@@ -9,8 +9,8 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: soba-web
-  ECS_SERVICE: soba-web-service
-  ECS_CLUSTER: soba-cluster
+  TF_WORKING_DIR: ./terraform
+  ENVIRONMENT: prod
 
 permissions:
   contents: read
@@ -47,31 +47,76 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Deploy
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
       
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      
+
       - name: Build and push Docker images
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Build and push web app
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build \
+            --cache-from $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           
           # Build and push API
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-api:$IMAGE_TAG ./server
+          docker build \
+            --cache-from $ECR_REGISTRY/$ECR_REPOSITORY-api:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY-api:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY-api:latest \
+            ./server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY-api:$IMAGE_TAG
-      
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ec2-user/app
-            docker-compose pull
-            docker-compose up -d
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-api:latest
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="environment=${{ env.ENVIRONMENT }}" \
+            -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+            -var="ecr_repository=${{ env.ECR_REPOSITORY }}" \
+            -var="github_repo=${{ github.repository }}" \
+            -var="db_name=${{ secrets.DB_NAME }}" \
+            -var="db_user=${{ secrets.DB_USER }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="smtp_host=${{ secrets.SMTP_HOST }}" \
+            -var="smtp_port=${{ secrets.SMTP_PORT }}" \
+            -var="smtp_user=${{ secrets.SMTP_USER }}" \
+            -var="smtp_password=${{ secrets.SMTP_PASSWORD }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+
+      - name: Wait for Infrastructure
+        run: sleep 60  # Espera 1 minuto para a infraestrutura estar pronta
+
+      - name: Update Container Images
+        if: success()
+        run: |
+          CLUSTER_NAME=$(terraform output -state=${{ env.TF_WORKING_DIR }}/terraform.tfstate -raw ecs_cluster_name)
+          WEB_SERVICE=$(terraform output -state=${{ env.TF_WORKING_DIR }}/terraform.tfstate -raw web_service_name)
+          API_SERVICE=$(terraform output -state=${{ env.TF_WORKING_DIR }}/terraform.tfstate -raw api_service_name)
+          
+          aws ecs update-service --cluster $CLUSTER_NAME --service $WEB_SERVICE --force-new-deployment
+          aws ecs update-service --cl
