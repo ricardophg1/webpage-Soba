@@ -47,23 +47,37 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions
       
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       
-      - name: Build and push Docker images
+      - name: Build and tag Docker images
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build and push web app
+          # Build web app
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           
-          # Build and push API
+          # Build API
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-api:$IMAGE_TAG ./server
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY-api:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY-api:latest
+
+      - name: Push Docker images
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Push web app
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          # Push API
           docker push $ECR_REGISTRY/$ECR_REPOSITORY-api:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-api:latest
       
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -73,5 +87,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ec2-user/app
+            
+            # Pull latest images
             docker-compose pull
+            
+            # Stop and remove existing containers
+            docker-compose down
+            
+            # Remove unused images to free up space
+            docker image prune -f
+            
+            # Start new containers
             docker-compose up -d
+            
+            # Verify deployment
+            docker-compose ps
